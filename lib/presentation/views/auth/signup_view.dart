@@ -10,23 +10,31 @@ class SignupView extends StatefulWidget {
   State<SignupView> createState() => _SignupViewState();
 }
 
+final AuthController controller = Get.find();
+final TextEditingController emailController = TextEditingController();
+final TextEditingController passwordController = TextEditingController();
+final TextEditingController nameController = TextEditingController();
+
 class _SignupViewState extends State<SignupView> {
-  final AuthController controller = Get.find();
-  final TextEditingController emailController = TextEditingController();
-  final TextEditingController passwordController = TextEditingController();
-  final TextEditingController nameController = TextEditingController();
-  final TextEditingController languageController = TextEditingController();
+  bool _obscurePassword = true;
 
   @override
   void initState() {
     super.initState();
-    final locale = Get.deviceLocale?.languageCode ?? 'en';
-    languageController.text = locale;
     ever(controller.user, (user) {
       if (user != null) {
         Get.offAllNamed(AppRoutes.login);
       }
     });
+  }
+
+  String _getDeviceLocale() {
+    if (Get.deviceLocale != null) {
+      return Get.deviceLocale!.languageCode;
+    }
+    
+    final locale = WidgetsBinding.instance.platformDispatcher.locale;
+    return locale.languageCode;
   }
 
   @override
@@ -46,8 +54,22 @@ class _SignupViewState extends State<SignupView> {
               SizedBox(height: 16),
               TextField(
                 controller: passwordController,
-                decoration: InputDecoration(labelText: '비밀번호'),
-                obscureText: true,
+                decoration: InputDecoration(
+                  labelText: '비밀번호',
+                  suffixIcon: IconButton(
+                    icon: Icon(
+                      _obscurePassword
+                          ? Icons.visibility_off
+                          : Icons.visibility,
+                    ),
+                    onPressed: () {
+                      setState(() {
+                        _obscurePassword = !_obscurePassword;
+                      });
+                    },
+                  ),
+                ),
+                obscureText: _obscurePassword,
               ),
               SizedBox(height: 16),
               TextField(
@@ -59,11 +81,12 @@ class _SignupViewState extends State<SignupView> {
                 onPressed: controller.isLoading.value
                     ? null
                     : () {
+                        final locale = _getDeviceLocale();
                         controller.signup(
                           emailController.text,
                           passwordController.text,
                           nameController.text,
-                          languageController.text,
+                          locale,
                         );
                       },
                 child: controller.isLoading.value

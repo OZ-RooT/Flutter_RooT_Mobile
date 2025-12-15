@@ -18,7 +18,9 @@ class AuthController extends GetxController {
   Future<void> login(String email, String password) async {
     isLoading.value = true;
     loginError.value = '';
-    final result = await _repo.login(LoginRequest(email: email, password: password));
+    final result = await _repo.login(
+      LoginRequest(email: email, password: password),
+    );
     if (result != null) {
       token.value = result;
     } else {
@@ -27,14 +29,40 @@ class AuthController extends GetxController {
     isLoading.value = false;
   }
 
-  Future<void> signup(String email, String password, String name, String language) async {
+  Future<void> signup(
+    String email,
+    String password,
+    String name,
+    String language,
+  ) async {
     isLoading.value = true;
     signupError.value = '';
-    final result = await _repo.signup(SignupRequest(email: email, password: password, name: name, language: language));
-    if (result != null) {
-      user.value = result;
+    final signupResult = await _repo.signup(
+      SignupRequest(
+        email: email,
+        password: password,
+        name: name,
+        language: language,
+      ),
+    );
+
+    if (signupResult != null) {
+      user.value = signupResult;
     } else {
-      signupError.value = '회원가입 실패';
+      final loginResult = await _repo.login(
+        LoginRequest(email: email, password: password),
+      );
+      if (loginResult != null) {
+        token.value = loginResult;
+        final userInfo = await _repo.getCurrentUser(loginResult.accessToken);
+        if (userInfo != null) {
+          user.value = userInfo;
+        } else {
+          signupError.value = '회원가입 후 유저정보를 가져오지 못했습니다';
+        }
+      } else {
+        signupError.value = '회원가입 실패';
+      }
     }
     isLoading.value = false;
   }
@@ -48,4 +76,13 @@ class AuthController extends GetxController {
   bool get isLoggedIn => _repo.isLoggedIn;
 
   String? get accessToken => TokenStorage.accessToken;
+
+  Future<void> refreshCurrentUser() async {
+    final access = TokenStorage.accessToken;
+    if (access == null) return;
+    final userInfo = await _repo.getCurrentUser(access);
+    if (userInfo != null) {
+      user.value = userInfo;
+    }
+  }
 }

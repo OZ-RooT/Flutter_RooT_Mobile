@@ -14,6 +14,7 @@ class _LoginViewState extends State<LoginView> {
   final AuthController controller = Get.put(AuthController());
   final TextEditingController emailController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
+  bool _obscurePassword = true;
 
   @override
   void initState() {
@@ -44,8 +45,18 @@ class _LoginViewState extends State<LoginView> {
                 SizedBox(height: 16),
                 TextField(
                   controller: passwordController,
-                  decoration: InputDecoration(labelText: '비밀번호'),
-                  obscureText: true,
+                  decoration: InputDecoration(
+                    labelText: '비밀번호',
+                    suffixIcon: IconButton(
+                      icon: Icon(_obscurePassword ? Icons.visibility_off : Icons.visibility),
+                      onPressed: () {
+                        setState(() {
+                          _obscurePassword = !_obscurePassword;
+                        });
+                      },
+                    ),
+                  ),
+                  obscureText: _obscurePassword,
                 ),
                 SizedBox(height: 24),
                 ElevatedButton(
@@ -83,12 +94,29 @@ class _LoginViewState extends State<LoginView> {
   }
 }
 
-class SignupView extends StatelessWidget {
+class SignupView extends StatefulWidget {
+  const SignupView({super.key});
+
+  @override
+  State<SignupView> createState() => _SignupViewState();
+}
+
+class _SignupViewState extends State<SignupView> {
   final AuthController controller = Get.find();
   final TextEditingController emailController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
   final TextEditingController nameController = TextEditingController();
-  final TextEditingController languageController = TextEditingController();
+  bool _obscurePassword = true;
+
+  @override
+  void initState() {
+    super.initState();
+    ever(controller.user, (user) {
+      if (user != null) {
+        Get.offAllNamed(AppRoutes.login);
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -96,50 +124,70 @@ class SignupView extends StatelessWidget {
       appBar: AppBar(title: Text('회원가입')),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
-        child: Obx(() => Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                TextField(
-                  controller: emailController,
-                  decoration: InputDecoration(labelText: '이메일'),
-                ),
-                SizedBox(height: 16),
-                TextField(
-                  controller: passwordController,
-                  decoration: InputDecoration(labelText: '비밀번호'),
-                  obscureText: true,
-                ),
-                SizedBox(height: 16),
-                TextField(
-                  controller: nameController,
-                  decoration: InputDecoration(labelText: '이름'),
-                ),
-                SizedBox(height: 24),
-                ElevatedButton(
-                  onPressed: controller.isLoading.value
-                      ? null
-                      : () {
-                          controller.signup(
-                            emailController.text,
-                            passwordController.text,
-                            nameController.text,
-                            languageController.text,
-                          );
-                        },
-                  child: controller.isLoading.value
-                      ? CircularProgressIndicator(color: Colors.white)
-                      : Text('회원가입'),
-                ),
-                if (controller.signupError.value.isNotEmpty)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 16),
-                    child: Text(
-                      controller.signupError.value,
-                      style: TextStyle(color: Colors.red),
-                    ),
+        child: Obx(
+          () => Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              TextField(
+                controller: emailController,
+                decoration: InputDecoration(labelText: '이메일'),
+              ),
+              SizedBox(height: 16),
+              TextField(
+                controller: passwordController,
+                decoration: InputDecoration(
+                  labelText: '비밀번호',
+                  suffixIcon: IconButton(
+                    icon: Icon(_obscurePassword ? Icons.visibility_off : Icons.visibility),
+                    onPressed: () {
+                      setState(() {
+                        _obscurePassword = !_obscurePassword;
+                      });
+                    },
                   ),
-              ],
-            )),
+                ),
+                obscureText: _obscurePassword,
+              ),
+              SizedBox(height: 16),
+              TextField(
+                controller: nameController,
+                decoration: InputDecoration(labelText: '이름'),
+              ),
+              SizedBox(height: 24),
+              ElevatedButton(
+                onPressed: controller.isLoading.value
+                    ? null
+                    : () {
+                        final locale = Get.deviceLocale?.languageCode ?? 'en';
+                        controller.signup(
+                          emailController.text,
+                          passwordController.text,
+                          nameController.text,
+                          locale,
+                        );
+                      },
+                child: controller.isLoading.value
+                    ? CircularProgressIndicator(color: Colors.white)
+                    : Text('회원가입'),
+              ),
+              if (controller.signupError.value.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(top: 16),
+                  child: Text(
+                    controller.signupError.value,
+                    style: TextStyle(color: Colors.red),
+                  ),
+                ),
+              Spacer(),
+              TextButton(
+                onPressed: () {
+                  Get.offAllNamed(AppRoutes.login);
+                },
+                child: Text('로그인으로 돌아가기'),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
