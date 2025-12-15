@@ -11,20 +11,31 @@ class AuthApi {
 
   Future<ApiResponseToken> login(LoginRequest request) async {
     final response = await http.post(
-      Uri.parse('$_baseUrl/api/auth/login'),
+      Uri.parse('$_baseUrl/api/v1/auth/login'),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode(request.toJson()),
     );
     return ApiResponseToken.fromJson(jsonDecode(response.body));
   }
 
-  Future<ApiResponseUser> signup(SignupRequest request) async {
+  Future<ApiResponseToken> signup(SignupRequest request) async {
     final response = await http.post(
       Uri.parse('$_baseUrl/api/v1/auth/register'),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode(request.toJson()),
     );
-    print(response.body);
+    return ApiResponseToken.fromJson(jsonDecode(response.body));
+  }
+
+  Future<ApiResponseUser> getCurrentUser(String accessToken) async {
+    final response = await http.get(
+      Uri.parse('$_baseUrl/api/v1/users/me'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $accessToken',
+      },
+    );
+    
     return ApiResponseUser.fromJson(jsonDecode(response.body));
   }
 }
