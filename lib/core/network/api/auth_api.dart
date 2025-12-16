@@ -38,4 +38,22 @@ class AuthApi {
     
     return ApiResponseUser.fromJson(jsonDecode(response.body));
   }
+
+  Future<ApiResponseUser> updateUser(int id, String accessToken, Map<String, dynamic> body) async {
+    final uri = Uri.parse('$_baseUrl/api/v1/users/$id');
+    try {
+      final response = await http.put(
+        uri,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $accessToken',
+        },
+        body: jsonEncode(body),
+      );
+      return ApiResponseUser.fromJson(jsonDecode(response.body));
+    } catch (e) {
+      print('AuthApi.updateUser exception: $e');
+      rethrow;
+    }
+  }
 }

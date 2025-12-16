@@ -29,6 +29,18 @@ class AuthRepository {
     return null;
   }
 
+  Future<UserResponse?> updateUser(String accessToken, int id, Map<String, dynamic> body) async {
+    try {
+      final res = await _api.updateUser(id, accessToken, body);
+      if (res.success && res.data != null) {
+        return res.data;
+      }
+    } catch (e) {
+      print('AuthRepository.updateUser exception: $e');
+    }
+    return null;
+  }
+
   Future<UserResponse?> signup(SignupRequest request) async {
     final ApiResponseToken res = await _api.signup(request);
     if (res.success && res.data != null) {

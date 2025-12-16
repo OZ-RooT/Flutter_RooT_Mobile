@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:get/get.dart';
 import '../../../core/network/api/auth_repository.dart';
 import '../../../core/models/auth/login_request.dart';
@@ -5,9 +7,12 @@ import '../../../core/models/auth/signup_request.dart';
 import '../../../core/models/auth/token_response.dart';
 import '../../../core/models/auth/user_response.dart';
 import '../../../core/network/api/token_storage.dart';
+import '../../../core/network/api/image_api.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class AuthController extends GetxController {
   final AuthRepository _repo = AuthRepository();
+  final ImageApi _imageApi = ImageApi();
 
   var isLoading = false.obs;
   var loginError = ''.obs;
@@ -33,8 +38,10 @@ class AuthController extends GetxController {
     String email,
     String password,
     String name,
-    String language,
-  ) async {
+    String language, {
+    int? profileImageId,
+    String? profileImageUpload,
+  }) async {
     isLoading.value = true;
     signupError.value = '';
     final signupResult = await _repo.signup(
@@ -43,11 +50,21 @@ class AuthController extends GetxController {
         password: password,
         name: name,
         language: language,
+        profileImageId: profileImageId,
       ),
     );
 
     if (signupResult != null) {
       user.value = signupResult;
+      if (profileImageUpload != null && profileImageId == null) {
+        final access = TokenStorage.accessToken;
+        if (access != null) {
+          final body = <String, dynamic>{};
+          body['profileImage'] = profileImageUpload;
+          final updated = await _repo.updateUser(access, signupResult.id, body);
+          if (updated != null) user.value = updated;
+        }
+      }
     } else {
       final loginResult = await _repo.login(
         LoginRequest(email: email, password: password),
@@ -73,6 +90,33 @@ class AuthController extends GetxController {
     user.value = null;
   }
 
+  Future<bool> uploadAndSetProfileImage(File imageFile) async {
+    final access = TokenStorage.accessToken;
+    final currentUser = user.value;
+    if (access == null || currentUser == null) return false;
+    final uploadResult = await _imageApi.uploadImage(imageFile);
+    if (uploadResult == null) {
+      return false;
+    }
+    int? imageId = int.tryParse(uploadResult);
+    final tryBodies = <Map<String, dynamic>>[];
+    if (imageId != null) {
+      tryBodies.add({'profileImageId': imageId});
+    }
+    for (final body in tryBodies) {
+      try {
+        final updated = await _repo.updateUser(access, currentUser.id, body);
+        if (updated != null) {
+          user.value = updated;
+          return true;
+        }
+      } catch (e) {
+        print('uploadAndSetProfileImage: updateUser exception: $e');
+      }
+    }
+    return false;
+  }
+
   bool get isLoggedIn => _repo.isLoggedIn;
 
   String? get accessToken => TokenStorage.accessToken;
@@ -84,5 +128,14 @@ class AuthController extends GetxController {
     if (userInfo != null) {
       user.value = userInfo;
     }
+  }
+
+  String? fullProfileImageUrl(String? url) {
+    if (url == null) return null;
+    if (url.startsWith('http://') || url.startsWith('https://')) return url;
+    final base = dotenv.env['BASE_URL'] ?? '';
+    if (base.isEmpty) return url;
+    if (url.startsWith('/')) return base + url;
+    return '$base/$url';
   }
 }
